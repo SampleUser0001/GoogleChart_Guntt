@@ -1,0 +1,19 @@
+[
+    {
+        "id" : "1",
+        "task" : "Task 1",
+        "start" : "2024-03-07 0:00:00",
+        "end" : "2024-03-07 0:10:00",
+        "percent_complete" : 100,
+        "dependencies" : []
+    },
+    {
+        "id" : "2",
+        "task" : "Task 2",
+        "start" : "2024-03-07 0:10:00",
+        "end" : "2024-03-07 0:15:00",
+        "percent_complete" : 100,
+        "dependencies" : ["1"]
+    }
+
+]
