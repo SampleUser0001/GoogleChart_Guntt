@@ -14,5 +14,13 @@
         "end" : "2024-03-07 00:15:00",
         "percent_complete" : 100,
         "dependencies" : ["1"]
+    },
+    {
+        "id" : "3",
+        "task" : "Task 3",
+        "start" : "2024-03-07 00:15:00",
+        "end" : "2024-03-07 00:20:00",
+        "percent_complete" : 100,
+        "dependencies" : ["1","2"]
     }
 ]
