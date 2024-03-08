@@ -24,11 +24,11 @@
             jobList.map(job => {
                 return [
                     job.id,
-                    job.task,
+                    job.task === undefined ? job.id : job.task,
                     new Date(job.start),
                     new Date(job.end),
                     null,
-                    job.percent_complete,
+                    job.percent_complete === undefined ? 100 : job.percent_complete,
                     job.dependencies === undefined ? "" : job.dependencies.join(',')
                     
                 ]
