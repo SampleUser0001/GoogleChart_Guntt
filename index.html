@@ -114,7 +114,12 @@
 
     async function addDependencies() {
         jobList.forEach(job => {
-            job.dependencies = dependencyList.find(dep => dep.id === job.id).dependencies;
+            const dependency = dependencyList.find(dep => dep.id === job.id);
+            if (dependency === undefined) {
+                job.dependencies = [];
+            } else {
+                job.dependencies = dependency.dependencies;
+            }
         });
     }
 
