@@ -1,9 +1,5 @@
 [
     {
-        "id": "1",
-        "dependencies" : []
-    },
-    {
         "id": "2",
         "dependencies": ["1"]
     },
