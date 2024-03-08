@@ -42,38 +42,7 @@
         chart.draw(data, options);
     }
 
-    /**
-     * ファイル読み込みを行う。
-     */
-    function load(id, list, func, message, errorMessage) {
-        const input = document.getElementById(id);
-        const filepath = input.files[0];
-        console.info("filepath: ", filepath);
-        if (filepath) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    list = JSON.parse(e.target.result);
-                    console.info(list);
-                    console.info(jobList);
-                    (async function() {
-                        await func();
-                    })();
-                    console.info(message + " finished.")
-                } catch (e) {
-                    alert(errorMessage + e);
-                    console.error(e);
-                    throw new Error(e);
-                }
-            }
-            reader.readAsText(filepath);
-        } else {
-            const errorMessage = 'ファイルが選択されていません。';
-            alert(errorMessage);
-            console.error(errorMessage);
-            throw new Error(errorMessage);
-        }
-    }
+    // TODO loadDependenciesとloadJobListを共通化する。
     
     let dependencyList = [];
     function loadDependencies() {
