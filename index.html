@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
 <head>
 <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
@@ -6,15 +7,10 @@
     google.charts.setOnLoadCallback(drawChart);
 
     let jobList = [];
-    function daysToMilliseconds(days) {
-        return days * 24 * 60 * 60 * 1000;
-    }
-
-    function minitusToMilliseconds(minitus) {
-        return minitus * 60 * 1000;
-    }
 
     function drawChart() {
+        console.info("drawChart start.")
+        console.info("jobList: ", jobList)
         let data = new google.visualization.DataTable();
         data.addColumn('string', 'Task ID');
         data.addColumn('string', 'Task Name');
@@ -33,7 +29,7 @@
                     new Date(job.end),
                     null,
                     job.percent_complete,
-                    job.dependencies.join(',')
+                    job.dependencies === undefined ? "" : job.dependencies.join(',')
                     
                 ]
             }));
@@ -46,24 +42,28 @@
         chart.draw(data, options);
     }
 
-    function load() {
-        const input = document.getElementById('job_list_load');
+    // TODO loadDependenciesとloadJobListを共通化する。
+    
+    let dependencyList = [];
+    function loadDependencies() {
+        const id = 'dependencies_load';
+        const message = 'ジョブ依存ファイルの読み込み'
+        const errorMessage = 'ジョブ依存の読み込みに失敗しました。'
+
+        const input = document.getElementById(id);
         const filepath = input.files[0];
         console.info("filepath: ", filepath);
         if (filepath) {
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
-                    
-                    jobList = JSON.parse(e.target.result);
-                    console.info(jobList);
-                    (async function() {
-                        await drawChart();
-                    })();
-                    console.info("drawChart finished.")
+                    dependencyList = JSON.parse(e.target.result);
+                    console.info(dependencyList);
+                    console.info(message + " finished.")
                 } catch (e) {
-                    alert('読み込みに失敗しました。' + e);
+                    alert(errorMessage + e);
                     console.error(e);
+                    throw new Error(e);
                 }
             }
             reader.readAsText(filepath);
@@ -71,14 +71,67 @@
             const errorMessage = 'ファイルが選択されていません。';
             alert(errorMessage);
             console.error(errorMessage);
+            throw new Error(errorMessage);
         }
+
+        document.getElementById('job_load').style.visibility = 'visible';
     }
 
+    function loadJobList() {
+        const id = 'job_list_load';
+        const message = 'Jobデータファイルの読み込み'
+        const errorMessage = 'Jobデータファイルの読み込みに失敗しました。'
+
+        const input = document.getElementById(id);
+        const filepath = input.files[0];
+        console.info("filepath: ", filepath);
+        if (filepath) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    jobList = JSON.parse(e.target.result);
+                    console.info(jobList);
+                    (async function() {
+                        await addDependencies();
+                        await drawChart();
+                    })();
+                    console.info(message + " finished.")
+                } catch (e) {
+                    alert(errorMessage + e);
+                    console.error(e);
+                    throw new Error(e);
+                }
+            }
+            reader.readAsText(filepath);
+        } else {
+            const errorMessage = 'ファイルが選択されていません。';
+            alert(errorMessage);
+            console.error(errorMessage);
+            throw new Error(errorMessage);
+        }
+
+    }
+
+    async function addDependencies() {
+        jobList.forEach(job => {
+            job.dependencies = dependencyList.find(dep => dep.id === job.id).dependencies;
+        });
+    }
+
+    // TODO : dependencyファイルの読み込み
+    // TODO : dependencyファイルの読み込み後にジョブデータファイルを表示にする。
+    // TODO : ファイル読み込みを共通化する。
 </script>
 </head>
 <body>
-    <input type="file" id="job_list_load" />
-    <button id="job_list_load_button" onclick="load()">Load</button>
+    ジョブ依存ファイルを選択してください。
+    <input type="file" id="dependencies_load" />
+    <button id="dependencies_load_button" onclick="loadDependencies()">Load</button>
+    <div id="job_load" style="visibility: hidden;">
+        ジョブデータファイルを選択してください。
+        <input type="file" id="job_list_load" />
+        <button id="job_list_load_button" onclick="loadJobList()">Load</button>
+    </div>
     <div id="chart_div"></div>
 </body>
 </html>

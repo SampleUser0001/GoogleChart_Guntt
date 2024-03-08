@@ -1,0 +1,14 @@
+[
+    {
+        "id": "1",
+        "dependencies" : []
+    },
+    {
+        "id": "2",
+        "dependencies": ["1"]
+    },
+    {
+        "id": "3",
+        "dependencies": ["1","2"]
+    }
+]
