@@ -14,6 +14,7 @@
         let data = new google.visualization.DataTable();
         data.addColumn('string', 'Task ID');
         data.addColumn('string', 'Task Name');
+        data.addColumn('string', 'Time Over');
         data.addColumn('date', 'Start Date');
         data.addColumn('date', 'End Date');
         data.addColumn('number', 'Duration');
@@ -25,6 +26,7 @@
                 return [
                     job.id,
                     job.task === undefined ? job.id : job.task,
+                    job.scheduled === undefined || new Date(job.scheduled) >= new Date(job.end) ? null : "Time over",
                     new Date(job.start),
                     new Date(job.end),
                     null,
@@ -37,7 +39,7 @@
         const trackHeight = 42;
         var options = {
             guntt: {
-                trackHeight: trackHeight
+                trackHeight: trackHeight,
             },
             height: trackHeight * (data.getNumberOfRows() + 1)
         };
