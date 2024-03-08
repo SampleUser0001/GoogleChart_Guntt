@@ -34,7 +34,12 @@
                 ]
             }));
 
+        const trackHeight = 42;
         var options = {
+            guntt: {
+                trackHeight: trackHeight
+            },
+            height: trackHeight * (data.getNumberOfRows() + 1)
         };
 
         var chart = new google.visualization.Gantt(document.getElementById('chart_div'));
