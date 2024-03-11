@@ -1,6 +1,7 @@
 <html>
 <head>
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
   <script type="text/javascript">
     google.charts.load('current', {'packages':['gantt']});
     google.charts.setOnLoadCallback(drawChart);
@@ -45,6 +46,25 @@
       var chart = new google.visualization.Gantt(document.getElementById('chart_div'));
 
       chart.draw(data, options);
+      _date();
+    }
+    function _date() {
+// 時分秒の文字列
+const timeStr = "14:45:30";
+
+// 時分秒を分解
+const parts = timeStr.split(":");
+const hours = parseInt(parts[0], 10);
+const minutes = parseInt(parts[1], 10);
+const seconds = parseInt(parts[2], 10);
+
+// 現在の日付で新しいDateオブジェクトを作成
+const date = new Date();
+
+// 時分秒を設定
+date.setHours(hours, minutes, seconds, 0);
+
+console.log(date);
     }
   </script>
 </head>

@@ -2,6 +2,7 @@
 <html>
 <head>
 <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
 <script type="text/javascript">
     google.charts.load('current', {'packages':['gantt']});
     google.charts.setOnLoadCallback(drawChart);
@@ -26,11 +27,11 @@
                 return [
                     job.id,
                     job.task === undefined ? job.id : job.task,
-                    job.scheduled === undefined || new Date(job.scheduled) >= new Date(job.end) ? null : "Time over",
+                    job.scheduled === undefined || job.scheduled === null || new Date(job.scheduled) >= new Date(job.end) ? null : "Time over",
                     new Date(job.start),
                     new Date(job.end),
                     null,
-                    job.percent_complete === undefined ? 100 : job.percent_complete,
+                    job.percent_complete === undefined ? 120 : job.percent_complete,
                     job.dependencies === undefined ? "" : job.dependencies.join(',')
                     
                 ]
@@ -131,24 +132,44 @@
         // scheduledファイルは「時刻」しか持っていない想定。
         // ジョブ実行日付を推測する。
         const jobDate = guessJobDate();
+        console.log("guessJobDate: ", jobDate);
 
         jobList.forEach(job => {
             const scheduled = scheduledList.find(s => s.id === job.id);
             if (scheduled === undefined) {
-                job.scheduled = "";
+                job.scheduled = null;
             } else {
-                job.scheduled = scheduled.scheduled;
+                job.scheduled = jobDate + " " + scheduled.scheduled;
             }
+            console.log("job.id: ", job.id, " job.scheduled: ", job.scheduled, " job.end: ", job.end);
         });
 
     }
 
-    async function guessJobDate() {
-        // ジョブ実行日付を推測する。
-        
-    }
+    // ジョブ実行日付を推測する。
+    function guessJobDate() {
+        const jobDatesMap = new Map();
+        for(let i = 0; i < jobList.length; i++) {
+            const jobStartDate = jobList[i].start.substring(0, 10);
+            jobDatesMap.has(jobStartDate) ? jobDatesMap.set(jobStartDate, jobDatesMap.get(jobStartDate) + 1) : jobDatesMap.set(jobStartDate, 1);
+        }
 
-    // TODO : ファイル読み込みを共通化する。
+        console.log("jobDatesMap: ", jobDatesMap);
+        // ジョブ実行日付の内、最も出現回数が多いものを探す
+        let maxDateCount = 0;
+        let maxJobDate = null;
+        for (const [jobDate , counter] of jobDatesMap.entries()) {
+            console.log("jobDate: ", jobDate, " counter: ", counter)
+            if (counter > maxDateCount) {
+                maxDateCount = counter;
+                maxJobDate = jobDate;
+            }
+        }
+        return maxJobDate;
+    }
+    
+    // TODO : もしかして async/await いらない？
+
 </script>
 </head>
 <body>
