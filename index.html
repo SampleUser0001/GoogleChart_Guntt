@@ -2,6 +2,7 @@
 <html>
 <head>
 <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
 <script type="text/javascript">
     google.charts.load('current', {'packages':['gantt']});
     google.charts.setOnLoadCallback(drawChart);
@@ -14,6 +15,7 @@
         let data = new google.visualization.DataTable();
         data.addColumn('string', 'Task ID');
         data.addColumn('string', 'Task Name');
+        data.addColumn('string', 'Time Over');
         data.addColumn('date', 'Start Date');
         data.addColumn('date', 'End Date');
         data.addColumn('number', 'Duration');
@@ -25,10 +27,11 @@
                 return [
                     job.id,
                     job.task === undefined ? job.id : job.task,
+                    job.scheduled === undefined || job.scheduled === null || new Date(job.scheduled) >= new Date(job.end) ? null : "Time over",
                     new Date(job.start),
                     new Date(job.end),
                     null,
-                    job.percent_complete === undefined ? 100 : job.percent_complete,
+                    job.percent_complete === undefined ? 120 : job.percent_complete,
                     job.dependencies === undefined ? "" : job.dependencies.join(',')
                     
                 ]
@@ -37,7 +40,7 @@
         const trackHeight = 42;
         var options = {
             guntt: {
-                trackHeight: trackHeight
+                trackHeight: trackHeight,
             },
             height: trackHeight * (data.getNumberOfRows() + 1)
         };
@@ -47,74 +50,71 @@
         chart.draw(data, options);
     }
 
-    // TODO loadDependenciesとloadJobListを共通化する。
-    
+    function loadData(id, onSucess, onError) {
+        const input = document.getElementById(id);
+        const filepath = input.files[0];
+        console.info("filepath: ", filepath);
+        if (filepath) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    console.info(data);
+                    onSucess(data);
+                } catch (e) {
+                    alert(onError + e);
+                    console.error(e);
+                }
+            }
+            reader.readAsText(filepath);
+        } else {
+            const errorMessage = 'ファイルが選択されていません。';
+            alert(errorMessage);
+            console.error(errorMessage);
+            return;
+        }
+    }
+
     let dependencyList = [];
     function loadDependencies() {
         const id = 'dependencies_load';
         const message = 'ジョブ依存ファイルの読み込み'
         const errorMessage = 'ジョブ依存の読み込みに失敗しました。'
 
-        const input = document.getElementById(id);
-        const filepath = input.files[0];
-        console.info("filepath: ", filepath);
-        if (filepath) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    dependencyList = JSON.parse(e.target.result);
-                    console.info(dependencyList);
-                    console.info(message + " finished.")
-                } catch (e) {
-                    alert(errorMessage + e);
-                    console.error(e);
-                    throw new Error(e);
-                }
-            }
-            reader.readAsText(filepath);
-        } else {
-            const errorMessage = 'ファイルが選択されていません。';
-            alert(errorMessage);
-            console.error(errorMessage);
-            throw new Error(errorMessage);
-        }
+        loadData(id, (data) => {
+            dependencyList = data;
+            console.info(message + " finished.")
+            document.getElementById('load_schedule').style.visibility = 'visible';
+        }, errorMessage);
+    }
 
-        document.getElementById('job_load').style.visibility = 'visible';
+    let scheduledList = [];
+    function loadScheduleList() {
+        const id = 'load_schedule_list';
+        const message = 'Jobスケジュールファイルの読み込み'
+        const errorMessage = 'Jobスケジュールファイルの読み込みに失敗しました。'
+
+        loadData(id, (data) => {
+            scheduledList = data;
+            console.info(message + " finished.");
+            document.getElementById('load_job').style.visibility = 'visible';
+        }, errorMessage);
     }
 
     function loadJobList() {
-        const id = 'job_list_load';
+        const id = 'load_job_list';
         const message = 'Jobデータファイルの読み込み'
         const errorMessage = 'Jobデータファイルの読み込みに失敗しました。'
 
-        const input = document.getElementById(id);
-        const filepath = input.files[0];
-        console.info("filepath: ", filepath);
-        if (filepath) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    jobList = JSON.parse(e.target.result);
-                    console.info(jobList);
-                    (async function() {
-                        await addDependencies();
-                        await drawChart();
-                    })();
-                    console.info(message + " finished.")
-                } catch (e) {
-                    alert(errorMessage + e);
-                    console.error(e);
-                    throw new Error(e);
-                }
-            }
-            reader.readAsText(filepath);
-        } else {
-            const errorMessage = 'ファイルが選択されていません。';
-            alert(errorMessage);
-            console.error(errorMessage);
-            throw new Error(errorMessage);
-        }
-
+        loadData(id, (data) => {
+            jobList = data;
+            (async function() {
+                await addDependencies();
+                await addScheduled();
+                await drawChart();
+            })();
+            console.info(message + " finished.")
+        }, errorMessage);
     }
 
     async function addDependencies() {
@@ -128,19 +128,65 @@
         });
     }
 
-    // TODO : dependencyファイルの読み込み
-    // TODO : dependencyファイルの読み込み後にジョブデータファイルを表示にする。
-    // TODO : ファイル読み込みを共通化する。
+    async function addScheduled() {
+        // scheduledファイルは「時刻」しか持っていない想定。
+        // ジョブ実行日付を推測する。
+        const jobDate = guessJobDate();
+        console.log("guessJobDate: ", jobDate);
+
+        jobList.forEach(job => {
+            const scheduled = scheduledList.find(s => s.id === job.id);
+            if (scheduled === undefined) {
+                job.scheduled = null;
+            } else {
+                job.scheduled = jobDate + " " + scheduled.scheduled;
+            }
+            console.log("job.id: ", job.id, " job.scheduled: ", job.scheduled, " job.end: ", job.end);
+        });
+
+    }
+
+    // ジョブ実行日付を推測する。
+    function guessJobDate() {
+        const jobDatesMap = new Map();
+        for(let i = 0; i < jobList.length; i++) {
+            const jobStartDate = jobList[i].start.substring(0, 10);
+            jobDatesMap.has(jobStartDate) ? jobDatesMap.set(jobStartDate, jobDatesMap.get(jobStartDate) + 1) : jobDatesMap.set(jobStartDate, 1);
+        }
+
+        console.log("jobDatesMap: ", jobDatesMap);
+        // ジョブ実行日付の内、最も出現回数が多いものを探す
+        let maxDateCount = 0;
+        let maxJobDate = null;
+        for (const [jobDate , counter] of jobDatesMap.entries()) {
+            console.log("jobDate: ", jobDate, " counter: ", counter)
+            if (counter > maxDateCount) {
+                maxDateCount = counter;
+                maxJobDate = jobDate;
+            }
+        }
+        return maxJobDate;
+    }
+    
+    // TODO : もしかして async/await いらない？
+
 </script>
 </head>
 <body>
     ジョブ依存ファイルを選択してください。
     <input type="file" id="dependencies_load" />
     <button id="dependencies_load_button" onclick="loadDependencies()">Load</button>
-    <div id="job_load" style="visibility: hidden;">
+
+    <div id="load_schedule" style="visibility: hidden;">
+        ジョブ終了予定時刻ファイルを選択してください。
+        <input type="file" id="load_schedule_list" />
+        <button id="load_scheduled_button" onclick="loadScheduleList()">Load</button>
+    </div>
+
+    <div id="load_job" style="visibility: hidden;">
         ジョブデータファイルを選択してください。
-        <input type="file" id="job_list_load" />
-        <button id="job_list_load_button" onclick="loadJobList()">Load</button>
+        <input type="file" id="load_job_list" />
+        <button id="load_job_list_button" onclick="loadJobList()">Load</button>
     </div>
     <div id="chart_div"></div>
 </body>
